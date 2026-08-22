@@ -1,0 +1,6 @@
+{
+  "name": "Atmospheric Weather Dashboard",
+  "description": "A precision atmospheric weather station and forecasting dashboard featuring real-time meteorological observations, 5-day forecasts, 12-hour hourly Recharts trends, location search with debouncing, favorites persistence, and geolocation.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* High Density subtle custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(34, 211, 238, 0.5);
+  }
+}
+
+.font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+.font-sans {
+  font-family: var(--font-sans) !important;
+}
+
+/* Background Gradients */
+.atmos-bg-dark {
+  background: radial-gradient(ellipse at top left, #0f1c34 0%, #080d1a 50%, #030712 100%);
+}
+
+.atmos-bg-light {
+  background: radial-gradient(ellipse at top left, #f5f0ff 0%, #f7f5fd 40%, #f2f4fb 100%);
+}
+
