@@ -16,27 +16,50 @@
 
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.2); border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(99,130,190,0.4); }
+  ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.15); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(99,130,190,0.35); }
 }
 
 .font-mono { font-family: var(--font-mono) !important; }
 .font-sans { font-family: var(--font-sans) !important; }
 
-/* ── Dark backgrounds — richer blue-navy palette ── */
-/* Page: deep navy with a blue tint                  */
-.atmos-bg-dark      { background-color: #0b0f1a; }
-/* Sidebar: slightly deeper / true navy              */
-.atmos-sidebar-dark { background-color: #080c15; }
-/* Cards: raised dark blue-slate surface             */
-.atmos-card-dark    { background-color: #111827; }
+/* ─────────────────────────────────────────────────────
+   DARK MODE PALETTE
+   Sidebar:  #0a0c12  (near-black, unchanged)
+   Page bg:  #0f1623  (deep blue-navy, slightly lighter/teal-tinted vs sidebar)
+   Cards:    #192130  (raised dark blue-slate surface)
+   Metric cards: #1c2638 (slightly brighter variant)
+   Live card: gradient with teal-cyan ombre glow
+───────────────────────────────────────────────────── */
+.atmos-bg-dark      { background-color: #0f1623; }
+.atmos-sidebar-dark { background-color: #0a0c12; }
+.atmos-card-dark    { background-color: #192130; }
+.atmos-card-dark-raised { background-color: #1c2638; }
 
-/* ── Light backgrounds — pastel sky-blue theme ─── */
+/* Subtle dot grid pattern for main content area (dark) */
+.atmos-grid-dark {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Live conditions card: dark teal-cyan ombre gradient */
+.atmos-live-card-dark {
+  background: linear-gradient(
+    135deg,
+    #192130 0%,
+    #192130 45%,
+    #0f2a35 75%,
+    #0d2030 100%
+  );
+}
+
+/* ─────────────────────────────────────────────────────
+   LIGHT MODE PALETTE  (unchanged)
+───────────────────────────────────────────────────── */
 .atmos-bg-light      { background-color: #dce8f5; }
 .atmos-sidebar-light { background-color: #cddaed; }
 .atmos-card-light    { background-color: #ffffff; }
 
-/* ── Light card colour variants ────────────────── */
 .lcard-blue   { background-color: #e8f1fb; }
 .lcard-teal   { background-color: #e5f7f4; }
 .lcard-violet { background-color: #ede8fb; }

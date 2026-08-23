@@ -286,14 +286,14 @@ export default function App() {
         if (hour >= 5 && hour < 12) return 'Good morning, observer.';
         if (hour >= 12 && hour < 17) return 'Good afternoon, observer.';
         if (hour >= 17 && hour < 21) return 'Good evening, observer.';
-        return 'Good night, observer.';
+        return 'Still watching, observer.';
       }
     } catch {}
     const currentHour = new Date().getHours();
     if (currentHour >= 5 && currentHour < 12) return 'Good morning, observer.';
     if (currentHour >= 12 && currentHour < 17) return 'Good afternoon, observer.';
     if (currentHour >= 17 && currentHour < 21) return 'Good evening, observer.';
-    return 'Good night, observer.';
+    return 'Still watching, observer.';
   };
 
   // Desktop search state
@@ -412,7 +412,9 @@ export default function App() {
       </div>
 
       {/* Main Content Stage */}
-      <div className="flex-1 flex flex-col h-full overflow-y-auto overflow-x-hidden relative">
+      <div className={`flex-1 flex flex-col h-full overflow-y-auto overflow-x-hidden relative ${
+        theme === 'dark' ? 'atmos-grid-dark' : ''
+      }`}>
         {/* Mobile Header (only on small screens) */}
         <Header
           currentUnit={unit}

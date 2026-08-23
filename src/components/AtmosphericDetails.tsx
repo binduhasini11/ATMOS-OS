@@ -19,11 +19,11 @@ export const AtmosphericDetails: React.FC<AtmosphericDetailsProps> = ({
 
   // ── sub-card classes ──────────────────────────────
   const aqiCardCls = isDark
-    ? 'rounded-xl border p-4 bg-slate-900/40 border-slate-800/60'
+    ? 'rounded-xl border p-4 bg-slate-900/40 border-white/[0.06]'
     : 'rounded-xl border p-4 lcard-green border-emerald-200';
 
   const atmCardCls = isDark
-    ? 'rounded-xl border p-4 bg-slate-900/40 border-slate-800/60'
+    ? 'rounded-xl border p-4 bg-slate-900/40 border-white/[0.06]'
     : 'rounded-xl border p-4 lcard-indigo border-indigo-200';
 
   const labelCls = isDark
@@ -78,7 +78,7 @@ export const AtmosphericDetails: React.FC<AtmosphericDetailsProps> = ({
         id="air-quality-card"
         className={`rounded-xl border ${
           isDark
-            ? 'atmos-card-dark border-slate-800/70'
+            ? 'atmos-card-dark border-white/[0.07]'
             : 'atmos-card-light border-emerald-100 shadow-md shadow-emerald-50'
         }`}
       >
@@ -112,7 +112,7 @@ export const AtmosphericDetails: React.FC<AtmosphericDetailsProps> = ({
         id="solar-conditions-card"
         className={`rounded-xl border ${
           isDark
-            ? 'atmos-card-dark border-slate-800/70'
+            ? 'atmos-card-dark border-white/[0.07]'
             : 'atmos-card-light border-indigo-100 shadow-md shadow-indigo-50'
         }`}
       >

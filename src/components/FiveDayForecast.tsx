@@ -29,7 +29,7 @@ export const FiveDayForecast: React.FC<FiveDayForecastProps> = ({ forecastDays, 
       id="five-day-forecast-card"
       className={`rounded-2xl border h-full ${
         isDark
-          ? 'atmos-card-dark border-slate-800/70 text-slate-100'
+          ? 'atmos-card-dark border-white/[0.07] text-slate-100'
           : 'atmos-card-light border-violet-100 text-slate-900 shadow-md shadow-violet-100/40'
       }`}
     >

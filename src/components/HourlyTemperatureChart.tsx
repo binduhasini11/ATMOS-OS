@@ -123,7 +123,7 @@ export const HourlyTemperatureChart: React.FC<HourlyTemperatureChartProps> = ({
       id="hourly-forecast-chart-card"
       className={`rounded-2xl border ${
         isDark
-          ? 'atmos-card-dark border-slate-800/70 text-slate-100'
+          ? 'atmos-card-dark border-white/[0.07] text-slate-100'
           : 'atmos-card-light border-blue-100 text-slate-900 shadow-md shadow-blue-100/50'
       }`}
     >

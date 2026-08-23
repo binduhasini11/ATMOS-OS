@@ -78,15 +78,24 @@ export const CurrentWeatherCard: React.FC<CurrentWeatherCardProps> = ({
   return (
     <div className="space-y-3">
 
-      {/* ── LIVE CONDITIONS card ─────────────────── */}
+      {/* ── LIVE CONDITIONS card — ombre teal glow ── */}
       <div
         id="current-weather-card"
         className={`rounded-2xl border relative overflow-hidden ${
           isDark
-            ? 'atmos-card-dark border-slate-800/70 text-slate-100'
+            ? 'atmos-live-card-dark border-white/[0.07] text-slate-100'
             : 'lcard-sky border-sky-200 text-slate-900 shadow-md shadow-sky-200/60'
         }`}
       >
+        {/* Ombre glow blob — bottom-right corner, dark mode only */}
+        {isDark && (
+          <div
+            className="pointer-events-none absolute -bottom-16 -right-16 w-72 h-72 rounded-full"
+            style={{
+              background: 'radial-gradient(circle, rgba(14,116,144,0.22) 0%, rgba(8,70,92,0.12) 45%, transparent 70%)',
+            }}
+          />
+        )}
         <div className="p-6 sm:p-7">
           {/* header row */}
           <div className="flex items-center justify-between mb-6">
@@ -166,10 +175,10 @@ export const CurrentWeatherCard: React.FC<CurrentWeatherCardProps> = ({
       {/* ── METRIC CARDS ROW ─────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
 
-        {/* Humidity — blue */}
+        {/* Humidity */}
         <div className={`rounded-xl border p-4 sm:p-5 ${
           isDark
-            ? 'atmos-card-dark border-slate-800/70'
+            ? 'atmos-card-dark-raised border-white/[0.07]'
             : 'lcard-blue border-blue-200 shadow-sm shadow-blue-100'
         }`}>
           <div className="flex items-center justify-between mb-3">
@@ -184,10 +193,10 @@ export const CurrentWeatherCard: React.FC<CurrentWeatherCardProps> = ({
           </div>
         </div>
 
-        {/* Wind — teal */}
+        {/* Wind */}
         <div className={`rounded-xl border p-4 sm:p-5 ${
           isDark
-            ? 'atmos-card-dark border-slate-800/70'
+            ? 'atmos-card-dark-raised border-white/[0.07]'
             : 'lcard-teal border-teal-200 shadow-sm shadow-teal-100'
         }`}>
           <div className="flex items-center justify-between mb-3">
@@ -202,10 +211,10 @@ export const CurrentWeatherCard: React.FC<CurrentWeatherCardProps> = ({
           </div>
         </div>
 
-        {/* Pressure — violet */}
+        {/* Pressure */}
         <div className={`rounded-xl border p-4 sm:p-5 ${
           isDark
-            ? 'atmos-card-dark border-slate-800/70'
+            ? 'atmos-card-dark-raised border-white/[0.07]'
             : 'lcard-violet border-violet-200 shadow-sm shadow-violet-100'
         }`}>
           <div className="flex items-center justify-between mb-3">
@@ -213,19 +222,17 @@ export const CurrentWeatherCard: React.FC<CurrentWeatherCardProps> = ({
             <Gauge className={`w-4 h-4 ${isDark ? 'text-slate-500' : 'text-violet-400'}`} />
           </div>
           <div className={`text-3xl sm:text-4xl font-light tracking-tight ${isDark ? 'text-slate-100' : 'text-violet-700'}`}>
-            {unit === 'C'
-              ? `${Math.round(current.pressure_mb)} mb`
-              : `${current.pressure_in.toFixed(2)} in`}
+            {unit === 'C' ? `${Math.round(current.pressure_mb)} mb` : `${current.pressure_in.toFixed(2)} in`}
           </div>
           <div className={`text-[11px] font-light mt-1 ${isDark ? 'text-slate-500' : 'text-violet-400'}`}>
             {getPressureDescription(current.pressure_mb)}
           </div>
         </div>
 
-        {/* Feels Like — amber */}
+        {/* Feels Like */}
         <div className={`rounded-xl border p-4 sm:p-5 ${
           isDark
-            ? 'atmos-card-dark border-slate-800/70'
+            ? 'atmos-card-dark-raised border-white/[0.07]'
             : 'lcard-amber border-amber-200 shadow-sm shadow-amber-100'
         }`}>
           <div className="flex items-center justify-between mb-3">
