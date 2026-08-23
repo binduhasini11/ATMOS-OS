@@ -2,14 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search,
   MapPin,
-  Compass,
   Sun,
   Moon,
   X,
   Loader2,
   Navigation,
-  Globe,
-  Radio,
   Menu,
 } from 'lucide-react';
 import { SearchLocationResult, TemperatureUnit, ThemeMode } from '../types';
@@ -51,12 +48,8 @@ export const Header: React.FC<HeaderProps> = ({
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Debounced search effect
   useEffect(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     const trimmed = searchTerm.trim();
     if (trimmed.length < 2) {
       setSearchResults([]);
@@ -64,239 +57,181 @@ export const Header: React.FC<HeaderProps> = ({
       setSearchError(null);
       return;
     }
-
     setIsSearching(true);
     setSearchError(null);
-
     debounceTimerRef.current = setTimeout(async () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      if (abortControllerRef.current) abortControllerRef.current.abort();
       abortControllerRef.current = new AbortController();
-
       try {
         const results = await searchCities(trimmed, abortControllerRef.current.signal);
         setSearchResults(results);
         setIsOpen(true);
         setSelectedIndex(-1);
       } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          console.error('Search error:', err);
-          setSearchError(err.message || 'Could not fetch matching locations');
-        }
+        if (err.name !== 'AbortError') setSearchError(err.message || 'Search failed');
       } finally {
         setIsSearching(false);
       }
     }, 350);
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
+    return () => { if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current); };
   }, [searchTerm]);
 
-  // Handle outside click to close dropdown
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (
-        searchContainerRef.current &&
-        !searchContainerRef.current.contains(e.target as Node)
-      ) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  const handleSelect = useCallback(
-    (loc: SearchLocationResult) => {
-      onSelectLocation(loc.lat, loc.lon, `${loc.name}, ${loc.country}`);
-      setSearchTerm('');
-      setSearchResults([]);
-      setIsOpen(false);
-      setSelectedIndex(-1);
-    },
-    [onSelectLocation]
-  );
+  const handleSelect = useCallback((loc: SearchLocationResult) => {
+    onSelectLocation(loc.lat, loc.lon, `${loc.name}, ${loc.country}`);
+    setSearchTerm('');
+    setSearchResults([]);
+    setIsOpen(false);
+    setSelectedIndex(-1);
+  }, [onSelectLocation]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      if (!isOpen && searchResults.length > 0) {
-        setIsOpen(true);
-      }
+      if (!isOpen && searchResults.length > 0) setIsOpen(true);
       setSelectedIndex((prev) => (prev < searchResults.length - 1 ? prev + 1 : 0));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex((prev) => (prev > 0 ? prev - 1 : searchResults.length - 1));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (selectedIndex >= 0 && selectedIndex < searchResults.length) {
-        handleSelect(searchResults[selectedIndex]);
-      } else if (searchResults.length > 0) {
-        handleSelect(searchResults[0]);
-      }
+      if (selectedIndex >= 0 && selectedIndex < searchResults.length) handleSelect(searchResults[selectedIndex]);
+      else if (searchResults.length > 0) handleSelect(searchResults[0]);
     } else if (e.key === 'Escape') {
       setIsOpen(false);
     }
   };
 
-  const clearSearch = () => {
-    setSearchTerm('');
-    setSearchResults([]);
-    setIsOpen(false);
-    setSearchError(null);
-  };
+  const isDark = theme === 'dark';
 
   return (
     <header
       id="app-header"
-      className={`lg:hidden sticky top-0 z-40 transition-colors duration-200 backdrop-blur-xl border-b ${
-        theme === 'dark'
-          ? 'bg-[#080e1c]/95 border-slate-800/80 text-slate-100'
-          : 'bg-[#faf7ff]/95 border-purple-200/80 text-slate-900 shadow-sm'
-      }`}
+      className={`lg:hidden sticky top-0 z-40 border-b ${
+        isDark
+          ? 'bg-[#0a0f1a]/95 border-slate-800/70 text-slate-100'
+          : 'bg-[#efefeb]/95 border-stone-300/60 text-slate-900'
+      } backdrop-blur-xl`}
     >
-      <div className="px-4 py-3 flex items-center justify-between gap-3">
-        {/* Mobile Sidebar Open Button & Brand */}
-        <div className="flex items-center gap-2.5">
-          {onOpenMobileSidebar && (
-            <button
-              onClick={onOpenMobileSidebar}
-              className={`p-1.5 rounded-xl border transition-colors ${
-                theme === 'dark'
-                  ? 'border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40'
-                  : 'border-purple-200 text-stone-700 hover:text-purple-950 hover:bg-purple-100'
-              }`}
-              aria-label="Open sidebar stations"
-            >
-              <Menu className="w-4 h-4" />
-            </button>
-          )}
+      <div className="px-4 py-3 flex items-center gap-3">
+        {/* Menu button */}
+        {onOpenMobileSidebar && (
+          <button
+            onClick={onOpenMobileSidebar}
+            className={`p-1.5 rounded-lg border transition-colors shrink-0 ${
+              isDark
+                ? 'border-slate-800 text-slate-400 hover:text-slate-200'
+                : 'border-stone-300 text-stone-500 hover:text-slate-800'
+            }`}
+            aria-label="Open menu"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        )}
 
-          <div className="flex items-center gap-2">
-            <div
-              className={`w-2.5 h-2.5 rounded-full animate-pulse ${
-                theme === 'dark'
-                  ? 'bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)]'
-                  : 'bg-purple-600 shadow-[0_0_6px_rgba(147,51,234,0.6)]'
-              }`}
-            />
-            <span
-              className={`text-xs font-bold font-mono tracking-[0.15em] uppercase ${
-                theme === 'dark' ? 'text-cyan-400' : 'text-purple-900 font-extrabold'
-              }`}
-            >
-              ATMOS / OS
-            </span>
-          </div>
-        </div>
-
-        {/* Quick Search on Mobile */}
-        <div ref={searchContainerRef} className="relative flex-1 max-w-xs">
+        {/* Search */}
+        <div ref={searchContainerRef} className="relative flex-1">
           <div
-            className={`relative flex items-center rounded-xl border text-xs ${
-              theme === 'dark'
-                ? 'bg-slate-900/80 border-slate-800'
-                : 'bg-white border-purple-200 shadow-xs'
+            className={`relative flex items-center rounded-lg border ${
+              isDark
+                ? 'bg-slate-800/60 border-slate-700/60'
+                : 'bg-white/80 border-stone-300'
             }`}
           >
+            <Search className={`w-3.5 h-3.5 ml-3 shrink-0 ${isDark ? 'text-slate-500' : 'text-stone-400'}`} />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search station..."
-              className={`w-full py-2 pl-3 pr-7 bg-transparent text-xs outline-none font-mono ${
-                theme === 'dark'
-                  ? 'text-slate-100 placeholder:text-slate-500'
-                  : 'text-slate-950 placeholder:text-stone-600 font-medium'
+              onKeyDown={handleKeyDown}
+              placeholder="Search places · Current position"
+              className={`w-full bg-transparent px-2.5 py-2 text-[12px] font-mono outline-none ${
+                isDark
+                  ? 'text-slate-200 placeholder:text-slate-500'
+                  : 'text-slate-900 placeholder:text-stone-400'
               }`}
             />
-            {searchTerm ? (
+            {searchTerm && (
               <button
                 type="button"
-                onClick={clearSearch}
-                className="absolute right-2 text-slate-400 hover:text-slate-200"
+                onClick={() => { setSearchTerm(''); setSearchResults([]); setIsOpen(false); }}
+                className={`mr-2.5 ${isDark ? 'text-slate-500' : 'text-stone-400'}`}
               >
-                <X className="w-3.5 h-3.5" />
+                {isSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
               </button>
-            ) : (
-              <Search
-                className={`w-3.5 h-3.5 absolute right-2 pointer-events-none ${
-                  theme === 'dark' ? 'text-slate-500' : 'text-purple-600'
-                }`}
-              />
             )}
           </div>
 
           {isOpen && (
             <div
-              className={`absolute top-full left-0 right-0 mt-1.5 rounded-xl border shadow-xl z-50 overflow-hidden ${
-                theme === 'dark'
-                  ? 'bg-[#0b1120] border-slate-800'
-                  : 'bg-white border-purple-200 shadow-xl'
+              className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 overflow-hidden ${
+                isDark
+                  ? 'bg-slate-900 border-slate-700'
+                  : 'bg-white border-stone-200 shadow-lg'
               }`}
             >
               {searchResults.map((loc, idx) => (
                 <button
                   key={`${loc.id}-${idx}`}
                   onClick={() => handleSelect(loc)}
-                  className={`w-full px-3 py-2.5 text-left text-xs flex items-center justify-between transition-colors ${
-                    theme === 'dark'
-                      ? 'hover:bg-cyan-950/40 hover:text-cyan-300'
-                      : 'hover:bg-purple-100 hover:text-purple-950 text-slate-900 font-medium'
+                  className={`w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 text-[12px] transition-colors ${
+                    isDark
+                      ? 'hover:bg-slate-800 text-slate-300'
+                      : 'hover:bg-stone-50 text-slate-700'
                   }`}
                 >
-                  <span className="truncate">{loc.name}, {loc.country}</span>
-                  <span
-                    className={`text-[10px] font-mono shrink-0 pl-2 ${
-                      theme === 'dark' ? 'text-slate-500' : 'text-stone-600'
-                    }`}
-                  >
-                    {loc.lat.toFixed(1)}°
-                  </span>
+                  <MapPin className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-slate-500' : 'text-stone-400'}`} />
+                  <span>{loc.name}, {loc.country}</span>
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* Quick Location & Unit */}
-        <div className="flex items-center gap-1.5">
+        {/* °C / °F */}
+        <div className={`flex items-center text-[11px] font-mono font-semibold gap-1 shrink-0 ${isDark ? 'text-slate-500' : 'text-stone-500'}`}>
           <button
-            onClick={onUseCurrentLocation}
-            disabled={isLocating}
-            className={`p-2 rounded-xl border transition-all ${
-              theme === 'dark'
-                ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400'
-                : 'border-purple-300 bg-purple-100 text-purple-950 shadow-xs'
-            }`}
-            aria-label="Use current location"
+            onClick={() => onToggleUnit('C')}
+            className={`transition-colors ${currentUnit === 'C' ? (isDark ? 'text-slate-100' : 'text-slate-900') : ''}`}
           >
-            {isLocating ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Navigation className="w-3.5 h-3.5" />
-            )}
+            °C
           </button>
-
+          <span>/</span>
           <button
-            onClick={onToggleTheme}
-            className={`p-2 rounded-xl border transition-all ${
-              theme === 'dark'
-                ? 'border-slate-800 bg-slate-900 text-amber-400'
-                : 'border-purple-200 bg-white text-purple-900 shadow-xs'
-            }`}
-            aria-label="Toggle theme"
+            onClick={() => onToggleUnit('F')}
+            className={`transition-colors ${currentUnit === 'F' ? (isDark ? 'text-slate-100' : 'text-slate-900') : ''}`}
           >
-            {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+            °F
           </button>
         </div>
+
+        {/* Location + Theme */}
+        <button
+          onClick={onUseCurrentLocation}
+          disabled={isLocating}
+          className={`p-1.5 rounded-lg shrink-0 transition-colors ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-stone-500 hover:text-slate-800'}`}
+          aria-label="Use current location"
+        >
+          {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+        </button>
+
+        <button
+          onClick={onToggleTheme}
+          className={`p-1.5 rounded-lg shrink-0 transition-colors ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-stone-500 hover:text-slate-800'}`}
+          aria-label="Toggle theme"
+        >
+          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
       </div>
     </header>
   );
 };
-

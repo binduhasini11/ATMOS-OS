@@ -23,7 +23,9 @@ import { FiveDayForecast } from './components/FiveDayForecast';
 import { AtmosphericDetails } from './components/AtmosphericDetails';
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 import { ErrorState } from './components/ErrorState';
-import { Info, Radio, Activity, Terminal } from 'lucide-react';
+import { Search, Navigation, Loader2, X, Sun, Moon, MapPin } from 'lucide-react';
+import { searchCities } from './services/weatherApi';
+import { SearchLocationResult } from './types';
 
 const FAVORITES_STORAGE_KEY = 'ATMOSPHERE_FAVORITES_V1';
 const UNIT_STORAGE_KEY = 'ATMOSPHERE_UNIT_V1';
@@ -274,6 +276,88 @@ export default function App() {
   const sunrise = firstDayAstro?.sunrise || '06:15 AM';
   const sunset = firstDayAstro?.sunset || '06:30 PM';
 
+  // Compute greeting message based on local hour
+  const getGreeting = (): string => {
+    try {
+      if (weatherData?.location?.localtime) {
+        const timePart = weatherData.location.localtime.split(' ')[1] || '';
+        const [h] = timePart.split(':');
+        const hour = parseInt(h, 10) || new Date().getHours();
+        if (hour >= 5 && hour < 12) return 'Good morning, observer.';
+        if (hour >= 12 && hour < 17) return 'Good afternoon, observer.';
+        if (hour >= 17 && hour < 21) return 'Good evening, observer.';
+        return 'Good night, observer.';
+      }
+    } catch {}
+    const currentHour = new Date().getHours();
+    if (currentHour >= 5 && currentHour < 12) return 'Good morning, observer.';
+    if (currentHour >= 12 && currentHour < 17) return 'Good afternoon, observer.';
+    if (currentHour >= 17 && currentHour < 21) return 'Good evening, observer.';
+    return 'Good night, observer.';
+  };
+
+  // Desktop search state
+  const [desktopSearch, setDesktopSearch] = useState('');
+  const [desktopResults, setDesktopResults] = useState<SearchLocationResult[]>([]);
+  const [desktopSearching, setDesktopSearching] = useState(false);
+  const [desktopOpen, setDesktopOpen] = useState(false);
+  const [desktopSelectedIdx, setDesktopSelectedIdx] = useState(-1);
+  const desktopSearchRef = useRef<HTMLDivElement>(null);
+  const desktopDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const desktopAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (desktopDebounceRef.current) clearTimeout(desktopDebounceRef.current);
+    const trimmed = desktopSearch.trim();
+    if (trimmed.length < 2) { setDesktopResults([]); setDesktopSearching(false); return; }
+    setDesktopSearching(true);
+    desktopDebounceRef.current = setTimeout(async () => {
+      if (desktopAbortRef.current) desktopAbortRef.current.abort();
+      desktopAbortRef.current = new AbortController();
+      try {
+        const results = await searchCities(trimmed, desktopAbortRef.current.signal);
+        setDesktopResults(results);
+        setDesktopOpen(true);
+        setDesktopSelectedIdx(-1);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') console.error(err);
+      } finally { setDesktopSearching(false); }
+    }, 350);
+  }, [desktopSearch]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (desktopSearchRef.current && !desktopSearchRef.current.contains(e.target as Node)) {
+        setDesktopOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const handleDesktopSelect = (loc: SearchLocationResult) => {
+    handleSelectLocation(loc.lat, loc.lon, `${loc.name}, ${loc.country}`);
+    setDesktopSearch('');
+    setDesktopResults([]);
+    setDesktopOpen(false);
+  };
+
+  const handleDesktopKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setDesktopSelectedIdx((p) => (p < desktopResults.length - 1 ? p + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setDesktopSelectedIdx((p) => (p > 0 ? p - 1 : desktopResults.length - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const idx = desktopSelectedIdx >= 0 ? desktopSelectedIdx : 0;
+      if (desktopResults[idx]) handleDesktopSelect(desktopResults[idx]);
+    } else if (e.key === 'Escape') {
+      setDesktopOpen(false);
+    }
+  };
+
   return (
     <div
       className={`flex h-screen w-screen overflow-hidden font-sans select-none ${
@@ -327,9 +411,9 @@ export default function App() {
         />
       </div>
 
-      {/* Main High Density Telemetry Stage */}
+      {/* Main Content Stage */}
       <div className="flex-1 flex flex-col h-full overflow-y-auto overflow-x-hidden relative">
-        {/* Mobile Header (Navbar with Search and Menu Button) */}
+        {/* Mobile Header (only on small screens) */}
         <Header
           currentUnit={unit}
           onToggleUnit={handleToggleUnit}
@@ -343,25 +427,154 @@ export default function App() {
           onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
         />
 
-        {/* Inner Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
-          {/* Fallback Demo status banner if API key is not supplied */}
-          {weatherData?.isFallbackDemo && (
-            <div
-              className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-xs font-mono backdrop-blur-xl ${
+        {/* Desktop top bar */}
+        <div className={`hidden lg:flex items-center justify-between gap-4 px-8 py-4 border-b ${
+          theme === 'dark' ? 'border-white/5' : 'border-blue-200/60'
+        }`}>
+          {/* Desktop search */}
+          <div ref={desktopSearchRef} className="relative flex-1 max-w-md">
+            <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${
+              theme === 'dark'
+                ? 'bg-white/5 border-white/10 hover:border-white/20'
+                : 'bg-white border-blue-200'
+            }`}>
+              <Search className={`w-3.5 h-3.5 shrink-0 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
+              <input
+                type="text"
+                value={desktopSearch}
+                onChange={(e) => setDesktopSearch(e.target.value)}
+                onKeyDown={handleDesktopKeyDown}
+                placeholder="Search places · Current position"
+                className={`flex-1 bg-transparent text-sm font-mono outline-none ${
+                  theme === 'dark'
+                    ? 'text-slate-200 placeholder:text-slate-600'
+                    : 'text-slate-900 placeholder:text-slate-400'
+                }`}
+              />
+              {desktopSearch && (
+                <button
+                  onClick={() => { setDesktopSearch(''); setDesktopResults([]); setDesktopOpen(false); }}
+                  className={`shrink-0 ${theme === 'dark' ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  {desktopSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                </button>
+              )}
+            </div>
+
+            {desktopOpen && desktopResults.length > 0 && (
+              <div className={`absolute top-full left-0 right-0 mt-1.5 rounded-xl border shadow-xl z-50 overflow-hidden ${
                 theme === 'dark'
-                  ? 'bg-cyan-950/30 border-cyan-500/30 text-cyan-300'
-                  : 'bg-purple-100/90 border-purple-200 text-purple-950 font-medium'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Info
-                  className={`w-4 h-4 shrink-0 ${
-                    theme === 'dark' ? 'text-cyan-400' : 'text-purple-700'
+                  ? 'bg-[#111827] border-white/10'
+                  : 'bg-white border-blue-200 shadow-blue-100'
+              }`}>
+                {desktopResults.map((loc, idx) => (
+                  <button
+                    key={`${loc.id}-${idx}`}
+                    onClick={() => handleDesktopSelect(loc)}
+                    onMouseEnter={() => setDesktopSelectedIdx(idx)}
+                    className={`w-full px-4 py-2.5 text-left flex items-center gap-2.5 text-sm transition-colors ${
+                      desktopSelectedIdx === idx
+                        ? theme === 'dark' ? 'bg-white/10 text-white' : 'bg-blue-50 text-slate-900'
+                        : theme === 'dark' ? 'hover:bg-white/5 text-slate-300' : 'hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <MapPin className={`w-3.5 h-3.5 shrink-0 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <span>{loc.name}, {loc.country}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right controls */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Unit toggle */}
+            <div className={`flex items-center rounded-lg border px-1 py-0.5 text-[11px] font-mono font-semibold ${
+              theme === 'dark'
+                ? 'bg-white/5 border-white/10'
+                : 'bg-white border-blue-200'
+            }`}>
+              {(['C','F'] as const).map((u) => (
+                <button
+                  key={u}
+                  onClick={() => handleToggleUnit(u)}
+                  className={`px-2.5 py-1 rounded-md transition-all ${
+                    unit === u
+                      ? theme === 'dark' ? 'bg-white/15 text-white font-bold' : 'bg-blue-100 text-indigo-700 font-bold'
+                      : theme === 'dark' ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-700'
                   }`}
-                />
-                <span>
-                  Demo Telemetry Mode. Set <strong className="underline font-bold">WEATHER_API_KEY</strong> in Settings for live global station data.
+                >
+                  °{u}
+                </button>
+              ))}
+            </div>
+
+            {/* Location */}
+            <button
+              onClick={handleUseCurrentLocation}
+              disabled={isLocating}
+              className={`p-2 rounded-lg border transition-colors ${
+                theme === 'dark'
+                  ? 'border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-white/20'
+                  : 'border-blue-200 text-slate-500 hover:text-indigo-700'
+              }`}
+              aria-label="Use current location"
+            >
+              {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+            </button>
+
+            {/* Theme */}
+            <button
+              onClick={handleToggleTheme}
+              className={`p-2 rounded-lg border transition-colors ${
+                theme === 'dark'
+                  ? 'border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-white/20'
+                  : 'border-blue-200 text-slate-500 hover:text-indigo-700'
+              }`}
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Inner Content Area */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl w-full mx-auto space-y-6">
+          {/* Greeting Heading + Status */}
+          {weatherData && !isLoading && !error && (
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+              <div className="space-y-1.5">
+                <div className={`text-[10px] uppercase tracking-widest font-semibold font-mono ${
+                  theme === 'dark' ? 'text-cyan-500/70' : 'text-indigo-400'
+                }`}>
+                  PERSONAL ATMOSPHERIC LOG
+                </div>
+                <h1 className={`text-4xl sm:text-5xl font-bold tracking-tight leading-tight ${
+                  theme === 'dark' ? 'text-white' : 'text-slate-950'
+                }`}>
+                  {getGreeting()}
+                </h1>
+                <p className={`text-sm font-normal ${
+                  theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
+                }`}>
+                  A clear view of what the air is doing around{' '}
+                  <strong className={`font-semibold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>
+                    {weatherData.location.name}
+                  </strong>
+                  {weatherData.isFallbackDemo && (
+                    <span className={`ml-3 text-[11px] font-mono ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
+                      · demo data
+                    </span>
+                  )}
+                </p>
+              </div>
+              {/* STATION ONLINE badge */}
+              <div className="flex items-center gap-1.5 shrink-0 pb-0.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className={`text-[10px] font-mono tracking-widest uppercase font-semibold ${
+                  theme === 'dark' ? 'text-slate-500' : 'text-indigo-400'
+                }`}>
+                  STATION ONLINE
                 </span>
               </div>
             </div>
@@ -424,27 +637,15 @@ export default function App() {
             </div>
           ) : null}
 
-          {/* High-density Footer */}
-          <footer
-            className={`pt-6 pb-4 border-t flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] font-mono ${
-              theme === 'dark'
-                ? 'border-slate-800/80 text-slate-400'
-                : 'border-purple-200/80 text-stone-600 font-medium'
-            }`}
-          >
-            <div>
-              ATMOS / OS • ATMOSPHERIC OBSERVATION SYSTEM V2.5
+          {/* Footer — Replit style */}
+          <footer className={`pt-5 pb-4 border-t flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] font-mono ${
+            theme === 'dark' ? 'border-white/5 text-slate-600' : 'border-blue-200/60 text-slate-400'
+          }`}>
+            <div className="tracking-widest uppercase">
+              ATMOS / {weatherData?.location.lat.toFixed(3) || '0.000'}° {weatherData?.location.lon.toFixed(3) || '0.000'}°
             </div>
-            <div className="flex items-center gap-3">
-              <span>LAT: {weatherData?.location.lat.toFixed(2) || '0.00'}°</span>
-              <span>LON: {weatherData?.location.lon.toFixed(2) || '0.00'}°</span>
-              <span
-                className={`font-bold ${
-                  theme === 'dark' ? 'text-cyan-400' : 'text-purple-700'
-                }`}
-              >
-                ● ONLINE
-              </span>
+            <div>
+              Forecast source refreshed {weatherData?.location.localtime?.split(' ')[1] || '--:--'}
             </div>
           </footer>
         </main>

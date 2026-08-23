@@ -1,15 +1,7 @@
 import React from 'react';
-import {
-  ShieldAlert,
-  Wind,
-  Droplets,
-  Activity,
-  AlertTriangle,
-  SunMedium,
-  Gauge,
-} from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { CurrentWeather, TemperatureUnit, ThemeMode, WeatherAlert } from '../types';
-import { getAirQualityCategory } from '../utils/formatters';
+import { getAirQualityCategory, getUvCategory } from '../utils/formatters';
 
 interface AtmosphericDetailsProps {
   current: CurrentWeather;
@@ -19,311 +11,130 @@ interface AtmosphericDetailsProps {
 }
 
 export const AtmosphericDetails: React.FC<AtmosphericDetailsProps> = ({
-  current,
-  alerts = [],
-  unit,
-  theme,
+  current, alerts = [], unit, theme,
 }) => {
-  const aqiInfo = current.air_quality
-    ? getAirQualityCategory(current.air_quality['us-epa-index'])
-    : null;
+  const isDark = theme === 'dark';
+  const aqiInfo     = current.air_quality ? getAirQualityCategory(current.air_quality['us-epa-index']) : null;
+  const uvCategory  = getUvCategory(current.uv);
+
+  // ── sub-card classes ──────────────────────────────
+  const aqiCardCls = isDark
+    ? 'rounded-xl border p-4 bg-slate-900/40 border-slate-800/60'
+    : 'rounded-xl border p-4 lcard-green border-emerald-200';
+
+  const atmCardCls = isDark
+    ? 'rounded-xl border p-4 bg-slate-900/40 border-slate-800/60'
+    : 'rounded-xl border p-4 lcard-indigo border-indigo-200';
+
+  const labelCls = isDark
+    ? 'text-[9px] font-mono tracking-widest uppercase font-semibold mb-1 text-slate-600'
+    : 'text-[9px] font-mono tracking-widest uppercase font-semibold mb-1 text-indigo-300';
+
+  const valueCls = isDark
+    ? 'text-lg font-light text-slate-200'
+    : 'text-lg font-light text-slate-800';
+
+  const subCls = isDark
+    ? 'text-[11px] font-mono mt-0.5 text-slate-600'
+    : 'text-[11px] font-mono mt-0.5 text-slate-400';
+
+  const sectionLabelCls = isDark
+    ? 'text-[9px] font-mono tracking-widest uppercase font-semibold text-slate-500'
+    : 'text-[9px] font-mono tracking-widest uppercase font-semibold text-indigo-400';
 
   return (
-    <div className="space-y-4">
-      {/* Severe Weather Alerts Banner (if present) */}
+    <div className="space-y-3">
+
+      {/* Severe Weather Alert */}
       {alerts && alerts.length > 0 && (
         <div
           id="weather-alerts-banner"
-          className="rounded-2xl border border-rose-500/40 bg-rose-950/40 text-rose-200 p-4 sm:p-5 shadow-lg relative overflow-hidden backdrop-blur-xl"
+          className={`rounded-xl border p-4 ${
+            isDark
+              ? 'bg-rose-950/30 border-rose-800/40 text-rose-200'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
+          }`}
         >
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400 shrink-0">
-              <AlertTriangle className="w-5 h-5 animate-pulse" />
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-500/30 text-rose-300">
-                  {alerts[0].severity || 'METEOROLOGICAL WARNING'}
-                </span>
-                <span className="text-xs text-rose-300 font-mono">
-                  {alerts[0].event}
-                </span>
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+            <div>
+              <div className={`text-[10px] font-mono font-semibold uppercase tracking-wider mb-1 ${
+                isDark ? 'text-rose-400' : 'text-rose-600'
+              }`}>
+                {alerts[0].severity || 'WEATHER WARNING'} · {alerts[0].event}
               </div>
-              <h3 className="text-sm font-bold text-rose-100 font-sans">
-                {alerts[0].headline}
-              </h3>
-              <p className="text-xs text-rose-300/90 font-sans leading-relaxed line-clamp-3">
-                {alerts[0].desc || alerts[0].instruction || 'Adhere to regional meteorological civil safety guidelines.'}
+              <p className={`text-xs font-light leading-relaxed line-clamp-3 ${
+                isDark ? 'text-rose-300/80' : 'text-rose-700'
+              }`}>
+                {alerts[0].headline || alerts[0].desc || alerts[0].instruction}
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Atmospheric Instrumentation Stack (Aligned cleanly as on mobile/tablet) */}
-      <div className="flex flex-col gap-4 sm:gap-5">
-        {/* Air Quality Station Card */}
-        <div
-          id="air-quality-card"
-          className={`rounded-2xl border transition-all duration-300 p-4 sm:p-5 backdrop-blur-xl ${
-            theme === 'dark'
-              ? 'bg-[#0f172a]/95 border-slate-800/90 text-slate-100 shadow-xl'
-              : 'bg-gradient-to-br from-[#faf7ff] via-[#f5efff] to-[#fcf9fe] border-purple-200/90 text-slate-900 shadow-sm'
-          }`}
-        >
-          <div
-            className={`flex items-center justify-between mb-3 pb-2.5 border-b ${
-              theme === 'dark' ? 'border-slate-800/80' : 'border-purple-200/70'
-            }`}
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <Activity
-                className={`w-3.5 h-3.5 shrink-0 ${
-                  theme === 'dark' ? 'text-cyan-400' : 'text-purple-700'
-                }`}
-              />
-              <span
-                className={`text-[11px] font-mono uppercase tracking-widest font-bold truncate ${
-                  theme === 'dark' ? 'text-cyan-400' : 'text-purple-900'
-                }`}
-              >
-                AIR QUALITY
-              </span>
-            </div>
+      {/* Air Quality */}
+      <div
+        id="air-quality-card"
+        className={`rounded-xl border ${
+          isDark
+            ? 'atmos-card-dark border-slate-800/70'
+            : 'atmos-card-light border-emerald-100 shadow-md shadow-emerald-50'
+        }`}
+      >
+        <div className="p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className={sectionLabelCls}>AIR QUALITY</div>
             {aqiInfo && (
-              <span
-                className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border shrink-0 whitespace-nowrap ${
-                  theme === 'dark'
-                    ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
-                    : 'border-purple-300 bg-purple-100 text-purple-950'
-                }`}
-              >
-                {aqiInfo.label}
-              </span>
+              <span className={`text-[10px] font-mono font-semibold ${
+                isDark ? 'text-slate-400' : 'text-emerald-600'
+              }`}>{aqiInfo.label}</span>
             )}
           </div>
-
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div
-              className={`p-3 rounded-xl border flex flex-col items-center justify-center min-w-0 ${
-                theme === 'dark'
-                  ? 'bg-slate-900/60 border-slate-800/80'
-                  : 'bg-white/90 border-purple-100 shadow-xs'
-              }`}
-            >
-              <div
-                className={`text-[10px] font-mono uppercase font-semibold truncate w-full ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-stone-600'
-                }`}
-              >
-                PM 2.5
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'PM 2.5', val: current.air_quality?.pm2_5?.toFixed(1) ?? '--' },
+              { label: 'PM 10',  val: current.air_quality?.pm10?.toFixed(1)  ?? '--' },
+              { label: 'O₃',     val: current.air_quality?.o3?.toFixed(1)    ?? '--' },
+            ].map(({ label, val }) => (
+              <div key={label} className={aqiCardCls}>
+                <div className={labelCls}>{label}</div>
+                <div className={isDark ? 'text-lg font-light text-slate-200' : 'text-lg font-light text-emerald-700'}>{val}</div>
+                <div className={isDark ? 'text-[11px] font-mono mt-0.5 text-slate-600' : 'text-[11px] font-mono mt-0.5 text-emerald-400'}>µg/m³</div>
               </div>
-              <div
-                className={`text-base sm:text-lg font-bold font-mono mt-0.5 tracking-tight ${
-                  theme === 'dark' ? 'text-cyan-300' : 'text-slate-950'
-                }`}
-              >
-                {current.air_quality?.pm2_5 ? current.air_quality.pm2_5.toFixed(1) : '--'}
-              </div>
-              <div
-                className={`text-[9px] font-mono mt-0.5 ${
-                  theme === 'dark' ? 'text-slate-500' : 'text-stone-500'
-                }`}
-              >
-                µg/m³
-              </div>
-            </div>
-
-            <div
-              className={`p-3 rounded-xl border flex flex-col items-center justify-center min-w-0 ${
-                theme === 'dark'
-                  ? 'bg-slate-900/60 border-slate-800/80'
-                  : 'bg-white/90 border-purple-100 shadow-xs'
-              }`}
-            >
-              <div
-                className={`text-[10px] font-mono uppercase font-semibold truncate w-full ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-stone-600'
-                }`}
-              >
-                PM 10
-              </div>
-              <div
-                className={`text-base sm:text-lg font-bold font-mono mt-0.5 tracking-tight ${
-                  theme === 'dark' ? 'text-cyan-300' : 'text-slate-950'
-                }`}
-              >
-                {current.air_quality?.pm10 ? current.air_quality.pm10.toFixed(1) : '--'}
-              </div>
-              <div
-                className={`text-[9px] font-mono mt-0.5 ${
-                  theme === 'dark' ? 'text-slate-500' : 'text-stone-500'
-                }`}
-              >
-                µg/m³
-              </div>
-            </div>
-
-            <div
-              className={`p-3 rounded-xl border flex flex-col items-center justify-center min-w-0 ${
-                theme === 'dark'
-                  ? 'bg-slate-900/60 border-slate-800/80'
-                  : 'bg-white/90 border-purple-100 shadow-xs'
-              }`}
-            >
-              <div
-                className={`text-[10px] font-mono uppercase font-semibold truncate w-full ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-stone-600'
-                }`}
-              >
-                OZONE (O3)
-              </div>
-              <div
-                className={`text-base sm:text-lg font-bold font-mono mt-0.5 tracking-tight ${
-                  theme === 'dark' ? 'text-cyan-300' : 'text-slate-950'
-                }`}
-              >
-                {current.air_quality?.o3 ? current.air_quality.o3.toFixed(1) : '--'}
-              </div>
-              <div
-                className={`text-[9px] font-mono mt-0.5 ${
-                  theme === 'dark' ? 'text-slate-500' : 'text-stone-500'
-                }`}
-              >
-                µg/m³
-              </div>
-            </div>
+            ))}
           </div>
         </div>
+      </div>
 
-        {/* Micro-climate & Solar Index Card */}
-        <div
-          id="solar-conditions-card"
-          className={`rounded-2xl border transition-all duration-300 p-4 sm:p-5 backdrop-blur-xl ${
-            theme === 'dark'
-              ? 'bg-[#0f172a]/95 border-slate-800/90 text-slate-100 shadow-xl'
-              : 'bg-gradient-to-br from-[#faf7ff] via-[#f5efff] to-[#fcf9fe] border-purple-200/90 text-slate-900 shadow-sm'
-          }`}
-        >
-          <div
-            className={`flex items-center justify-between mb-3 pb-2.5 border-b ${
-              theme === 'dark' ? 'border-slate-800/80' : 'border-purple-200/70'
-            }`}
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <SunMedium
-                className={`w-3.5 h-3.5 shrink-0 ${
-                  theme === 'dark' ? 'text-cyan-400' : 'text-purple-700'
-                }`}
-              />
-              <span
-                className={`text-[11px] font-mono uppercase tracking-widest font-bold truncate ${
-                  theme === 'dark' ? 'text-cyan-400' : 'text-purple-900'
-                }`}
-              >
-                ATMOSPHERE & OPTICS
-              </span>
+      {/* Atmosphere & Optics */}
+      <div
+        id="solar-conditions-card"
+        className={`rounded-xl border ${
+          isDark
+            ? 'atmos-card-dark border-slate-800/70'
+            : 'atmos-card-light border-indigo-100 shadow-md shadow-indigo-50'
+        }`}
+      >
+        <div className="p-4 sm:p-5">
+          <div className={`${sectionLabelCls} mb-4`}>ATMOSPHERE & OPTICS</div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className={atmCardCls}>
+              <div className={labelCls}>Cloud</div>
+              <div className={isDark ? 'text-lg font-light text-slate-200' : 'text-lg font-light text-indigo-700'}>{current.cloud}%</div>
+              <div className={isDark ? 'text-[11px] font-mono mt-0.5 text-slate-600' : 'text-[11px] font-mono mt-0.5 text-indigo-400'}>coverage</div>
             </div>
-            <span
-              className={`text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded border shrink-0 whitespace-nowrap ${
-                theme === 'dark'
-                  ? 'border-slate-700 bg-slate-800/70 text-slate-300'
-                  : 'border-purple-200 bg-purple-100/70 text-purple-950'
-              }`}
-            >
-              TELEMETRY
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div
-              className={`p-3 rounded-xl border flex flex-col items-center justify-center min-w-0 ${
-                theme === 'dark'
-                  ? 'bg-slate-900/60 border-slate-800/80'
-                  : 'bg-white/90 border-purple-100 shadow-xs'
-              }`}
-            >
-              <div
-                className={`text-[10px] font-mono uppercase font-semibold truncate w-full ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-stone-600'
-                }`}
-              >
-                CLOUDS
-              </div>
-              <div
-                className={`text-base sm:text-lg font-bold font-mono mt-0.5 tracking-tight ${
-                  theme === 'dark' ? 'text-slate-100' : 'text-slate-950'
-                }`}
-              >
-                {current.cloud}%
-              </div>
-              <div
-                className={`text-[9px] font-mono mt-0.5 ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-stone-500'
-                }`}
-              >
-                Coverage
-              </div>
-            </div>
-
-            <div
-              className={`p-3 rounded-xl border flex flex-col items-center justify-center min-w-0 ${
-                theme === 'dark'
-                  ? 'bg-slate-900/60 border-slate-800/80'
-                  : 'bg-white/90 border-purple-100 shadow-xs'
-              }`}
-            >
-              <div
-                className={`text-[10px] font-mono uppercase font-semibold truncate w-full ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-stone-600'
-                }`}
-              >
-                BEARING
-              </div>
-              <div
-                className={`text-base sm:text-lg font-bold font-mono mt-0.5 tracking-tight ${
-                  theme === 'dark' ? 'text-slate-100' : 'text-slate-950'
-                }`}
-              >
-                {current.wind_degree}°
-              </div>
-              <div
-                className={`text-[9px] font-mono font-semibold mt-0.5 truncate w-full ${
-                  theme === 'dark' ? 'text-cyan-400' : 'text-purple-700'
-                }`}
-              >
+            <div className={atmCardCls}>
+              <div className={labelCls}>Wind dir</div>
+              <div className={isDark ? 'text-lg font-light text-slate-200' : 'text-lg font-light text-indigo-700'}>{current.wind_degree}°</div>
+              <div className={`text-[11px] font-mono font-semibold mt-0.5 ${isDark ? 'text-slate-400' : 'text-indigo-500'}`}>
                 {current.wind_dir}
               </div>
             </div>
-
-            <div
-              className={`p-3 rounded-xl border flex flex-col items-center justify-center min-w-0 ${
-                theme === 'dark'
-                  ? 'bg-slate-900/60 border-slate-800/80'
-                  : 'bg-white/90 border-purple-100 shadow-xs'
-              }`}
-            >
-              <div
-                className={`text-[10px] font-mono uppercase font-semibold truncate w-full ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-stone-600'
-                }`}
-              >
-                UV INDEX
-              </div>
-              <div
-                className={`text-base sm:text-lg font-bold font-mono mt-0.5 tracking-tight ${
-                  theme === 'dark' ? 'text-slate-100' : 'text-slate-950'
-                }`}
-              >
-                {current.uv}
-              </div>
-              <div
-                className={`text-[9px] font-mono mt-0.5 ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-stone-500'
-                }`}
-              >
-                {current.uv >= 8 ? 'Very High' : current.uv >= 6 ? 'High' : current.uv >= 3 ? 'Moderate' : 'Low'}
-              </div>
+            <div className={atmCardCls}>
+              <div className={labelCls}>UV Index</div>
+              <div className={isDark ? 'text-lg font-light text-slate-200' : 'text-lg font-light text-amber-600'}>{current.uv}</div>
+              <div className={`text-[11px] font-mono mt-0.5 ${uvCategory.color}`}>{uvCategory.label}</div>
             </div>
           </div>
         </div>
@@ -331,4 +142,3 @@ export const AtmosphericDetails: React.FC<AtmosphericDetailsProps> = ({
     </div>
   );
 };
-

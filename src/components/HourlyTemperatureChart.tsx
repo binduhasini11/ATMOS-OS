@@ -8,9 +8,9 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
-import { CloudRain, Thermometer, Wind, Sparkles, Activity } from 'lucide-react';
+import { CloudRain, Thermometer, Wind } from 'lucide-react';
 import { ForecastDay, HourlyChartDataPoint, TemperatureUnit, ThemeMode } from '../types';
-import { formatTimeOnly } from '../utils/formatters';
+import { WeatherIcon } from '../utils/weatherIcons';
 
 interface HourlyTemperatureChartProps {
   forecastDays: ForecastDay[];
@@ -22,34 +22,25 @@ interface HourlyTemperatureChartProps {
 type ChartMetric = 'temp' | 'rain' | 'wind';
 
 export const HourlyTemperatureChart: React.FC<HourlyTemperatureChartProps> = ({
-  forecastDays,
-  localTimeString,
-  unit,
-  theme,
+  forecastDays, localTimeString, unit, theme,
 }) => {
   const [activeMetric, setActiveMetric] = useState<ChartMetric>('temp');
+  const isDark = theme === 'dark';
 
-  // Compute the next 18 hours relative to current local time
   const chartData: HourlyChartDataPoint[] = useMemo(() => {
     if (!forecastDays || forecastDays.length === 0) return [];
-
     let currentHourIndex = 0;
     try {
-      if (localTimeString && localTimeString.includes(' ')) {
-        const timePart = localTimeString.split(' ')[1];
-        const [h] = timePart.split(':');
+      if (localTimeString?.includes(' ')) {
+        const [h] = localTimeString.split(' ')[1].split(':');
         currentHourIndex = parseInt(h, 10) || 0;
       } else {
         currentHourIndex = new Date().getHours();
       }
-    } catch {
-      currentHourIndex = new Date().getHours();
-    }
+    } catch { currentHourIndex = new Date().getHours(); }
 
     const todayHours = forecastDays[0]?.hour || [];
     const tomorrowHours = forecastDays[1]?.hour || [];
-
-    // Slice starting from currentHourIndex forward for up to 18 hours
     const combinedHours = [
       ...todayHours.slice(currentHourIndex),
       ...tomorrowHours.slice(0, Math.max(0, 18 - (todayHours.length - currentHourIndex))),
@@ -59,22 +50,13 @@ export const HourlyTemperatureChart: React.FC<HourlyTemperatureChartProps> = ({
       const tempVal = unit === 'C' ? h.temp_c : h.temp_f;
       const feelsLikeVal = unit === 'C' ? h.feelslike_c : h.feelslike_f;
       const windVal = unit === 'C' ? h.wind_kph : h.wind_mph;
-
-      let timeLabel = '';
-      if (idx === 0) {
-        timeLabel = 'Now';
-      } else {
+      let timeLabel = idx === 0 ? 'Now' : (() => {
         const hourStr = h.time.split(' ')[1] || h.time;
-        const [hourNum] = hourStr.split(':');
-        const hr = parseInt(hourNum, 10);
-        const ampm = hr >= 12 ? 'PM' : 'AM';
-        const displayHr = hr % 12 === 0 ? 12 : hr % 12;
-        timeLabel = `${displayHr}${ampm}`;
-      }
-
+        const hr = parseInt(hourStr.split(':')[0], 10);
+        return `${hr % 12 === 0 ? 12 : hr % 12} ${hr >= 12 ? 'PM' : 'AM'}`;
+      })();
       return {
-        timeLabel,
-        fullTime: h.time,
+        timeLabel, fullTime: h.time,
         temp: Math.round(tempVal * 10) / 10,
         feelsLike: Math.round(feelsLikeVal * 10) / 10,
         humidity: h.humidity,
@@ -87,373 +69,226 @@ export const HourlyTemperatureChart: React.FC<HourlyTemperatureChartProps> = ({
     });
   }, [forecastDays, localTimeString, unit]);
 
-  // Calculate dynamic min & max for padding
   const { minVal, maxVal } = useMemo(() => {
     if (chartData.length === 0) return { minVal: 0, maxVal: 100 };
-    if (activeMetric === 'rain') {
-      return { minVal: 0, maxVal: 100 };
-    }
+    if (activeMetric === 'rain') return { minVal: 0, maxVal: 100 };
     const key = activeMetric === 'temp' ? 'temp' : 'windSpeed';
     const values = chartData.map((d) => d[key]);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
     const padding = activeMetric === 'temp' ? 2 : 5;
     return {
-      minVal: Math.floor(min - padding),
-      maxVal: Math.ceil(max + padding),
+      minVal: Math.floor(Math.min(...values) - padding),
+      maxVal: Math.ceil(Math.max(...values) + padding),
     };
   }, [chartData, activeMetric]);
 
+  // metric colours — richer in light mode
   const metricConfig = {
     temp: {
       dataKey: 'temp',
-      name: `Temperature (°${unit})`,
-      stroke: '#22D3EE',
-      fillStart: 'rgba(34, 211, 238, 0.35)',
-      fillEnd: 'rgba(34, 211, 238, 0.0)',
-      unit: `°${unit}`,
+      stroke: isDark ? '#22D3EE' : '#3b82f6',
+      fillStart: isDark ? 'rgba(34,211,238,0.15)' : 'rgba(59,130,246,0.14)',
+      fillEnd: 'rgba(0,0,0,0)',
     },
     rain: {
       dataKey: 'chanceOfRain',
-      name: 'Precipitation Chance (%)',
-      stroke: '#38BDF8',
-      fillStart: 'rgba(56, 189, 248, 0.4)',
-      fillEnd: 'rgba(56, 189, 248, 0.0)',
-      unit: '%',
+      stroke: isDark ? '#38BDF8' : '#6366f1',
+      fillStart: isDark ? 'rgba(56,189,248,0.15)' : 'rgba(99,102,241,0.12)',
+      fillEnd: 'rgba(0,0,0,0)',
     },
     wind: {
       dataKey: 'windSpeed',
-      name: `Wind Speed (${unit === 'C' ? 'km/h' : 'mph'})`,
-      stroke: '#10B981',
-      fillStart: 'rgba(16, 185, 129, 0.35)',
-      fillEnd: 'rgba(16, 185, 129, 0.0)',
-      unit: unit === 'C' ? ' km/h' : ' mph',
+      stroke: isDark ? '#34D399' : '#14b8a6',
+      fillStart: isDark ? 'rgba(52,211,153,0.15)' : 'rgba(20,184,166,0.12)',
+      fillEnd: 'rgba(0,0,0,0)',
     },
   }[activeMetric];
+
+  const metrics: { key: ChartMetric; label: string; Icon: React.ElementType }[] = [
+    { key: 'temp',  label: 'Temperature', Icon: Thermometer },
+    { key: 'rain',  label: 'Rain %',      Icon: CloudRain   },
+    { key: 'wind',  label: 'Wind',        Icon: Wind        },
+  ];
+
+  const metricLabels: Record<ChartMetric, string> = {
+    temp: 'air temperature',
+    rain: 'precipitation chance',
+    wind: unit === 'C' ? 'wind speed km/h' : 'wind speed mph',
+  };
+
+  const tickFill   = isDark ? '#475569' : '#94a3b8';
+  const gridStroke = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(99,130,190,0.1)';
 
   return (
     <div
       id="hourly-forecast-chart-card"
-      className={`rounded-2xl sm:rounded-3xl border transition-all duration-300 p-5 sm:p-6 relative backdrop-blur-xl ${
-        theme === 'dark'
-          ? 'bg-[#0f172a]/95 border-slate-800/90 text-slate-100 shadow-2xl'
-          : 'bg-gradient-to-br from-[#faf7ff] via-[#f5efff] to-[#fcf9fe] border-purple-200/90 text-slate-900 shadow-md'
+      className={`rounded-2xl border ${
+        isDark
+          ? 'atmos-card-dark border-slate-800/70 text-slate-100'
+          : 'atmos-card-light border-blue-100 text-slate-900 shadow-md shadow-blue-100/50'
       }`}
     >
-      {/* Chart Header with High Contrast Labels */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-[11px] font-mono uppercase tracking-widest font-bold ${
-                theme === 'dark' ? 'text-cyan-400' : 'text-purple-800'
+      <div className="p-5 sm:p-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
+          <div>
+            <div className={`text-[9px] font-mono tracking-widest uppercase font-semibold mb-1.5 ${
+              isDark ? 'text-slate-500' : 'text-indigo-400'
+            }`}>
+              THE NEXT 12 HOURS
+            </div>
+            <h2 className={`text-2xl sm:text-3xl font-light tracking-tight ${
+              isDark ? 'text-slate-100' : 'text-slate-800'
+            }`}>
+              {activeMetric === 'temp' ? 'Temperature trace'
+                : activeMetric === 'rain' ? 'Precipitation chance'
+                : 'Wind speed'}
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* dot + label */}
+            <div className="flex items-center gap-1.5 mr-1">
+              <div className="w-2 h-2 rounded-full" style={{ background: metricConfig.stroke }} />
+              <span className={`text-[11px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                {metricLabels[activeMetric]}
+              </span>
+            </div>
+
+            {/* metric pill selector */}
+            <div
+              id="chart-metric-selector"
+              className={`flex items-center gap-0.5 p-0.5 rounded-lg border text-[11px] font-mono ${
+                isDark
+                  ? 'bg-slate-900/60 border-slate-700/60'
+                  : 'bg-blue-50 border-blue-200'
               }`}
             >
-              HOURLY TEMPERATURE FORECAST [18H]
-            </span>
-            <div className="flex gap-1 items-end h-3">
-              <div
-                className={`w-1 h-3 ${
-                  theme === 'dark' ? 'bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)]' : 'bg-purple-600'
-                }`}
-              />
-              <div
-                className={`w-1 h-2.5 ${
-                  theme === 'dark' ? 'bg-cyan-400/60' : 'bg-purple-400'
-                }`}
-              />
-              <div
-                className={`w-1 h-1.5 ${
-                  theme === 'dark' ? 'bg-cyan-400/30' : 'bg-purple-300'
-                }`}
-              />
+              {metrics.map(({ key, label, Icon }) => (
+                <button
+                  key={key}
+                  id={`metric-${key}-btn`}
+                  onClick={() => setActiveMetric(key)}
+                  className={`px-2.5 py-1 rounded-md flex items-center gap-1 transition-all ${
+                    activeMetric === key
+                      ? isDark
+                        ? 'bg-slate-700 text-slate-100'
+                        : 'bg-white text-indigo-700 shadow-sm border border-blue-200 font-semibold'
+                      : isDark
+                      ? 'text-slate-500 hover:text-slate-300'
+                      : 'text-slate-400 hover:text-indigo-600'
+                  }`}
+                >
+                  <Icon className="w-3 h-3" />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
             </div>
           </div>
-          <span
-            className={`text-[10px] font-mono uppercase hidden md:inline ${
-              theme === 'dark' ? 'text-slate-400' : 'text-stone-600 font-medium'
-            }`}
-          >
-            INTERVAL: 1-HOUR • HORIZON: 18H
-          </span>
         </div>
 
-        {/* Metric Selector Pills */}
-        <div
-          id="chart-metric-selector"
-          className={`flex items-center p-1 rounded-xl border text-xs font-mono font-medium ${
-            theme === 'dark'
-              ? 'bg-slate-900/80 border-slate-800'
-              : 'bg-purple-100/70 border-purple-200'
-          }`}
-        >
-          <button
-            id="metric-temp-btn"
-            onClick={() => setActiveMetric('temp')}
-            className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-all ${
-              activeMetric === 'temp'
-                ? theme === 'dark'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold'
-                  : 'bg-white text-purple-950 border border-purple-300 font-bold shadow-sm'
-                : theme === 'dark'
-                ? 'text-slate-400 hover:text-slate-200'
-                : 'text-stone-700 hover:text-purple-900'
-            }`}
-          >
-            <Thermometer className="w-3.5 h-3.5" />
-            <span>Temp</span>
-          </button>
+        {/* Chart */}
+        <div className="h-52 sm:h-64 w-full">
+          {chartData.length === 0 ? (
+            <div className={`h-full flex items-center justify-center text-sm font-mono ${
+              isDark ? 'text-slate-600' : 'text-slate-400'
+            }`}>No data available</div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 8, right: 4, left: -28, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stopColor={metricConfig.fillStart} />
+                    <stop offset="100%" stopColor={metricConfig.fillEnd}   />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="4 4" stroke={gridStroke} vertical={false} />
+                <XAxis
+                  dataKey="timeLabel" stroke="transparent" tickLine={false} axisLine={false}
+                  tick={{ fontSize: 10, fontFamily: 'IBM Plex Mono, monospace', fill: tickFill }}
+                />
+                <YAxis
+                  domain={[minVal, maxVal]} stroke="transparent" tickLine={false} axisLine={false}
+                  unit={activeMetric === 'rain' ? '%' : '°'}
+                  tick={{ fontSize: 10, fontFamily: 'IBM Plex Mono, monospace', fill: tickFill }}
+                />
+                <Tooltip content={<CustomTooltip unit={unit} theme={theme} activeMetric={activeMetric} />} />
+                <Area
+                  type="monotone" dataKey={metricConfig.dataKey}
+                  stroke={metricConfig.stroke} strokeWidth={2}
+                  fillOpacity={1} fill="url(#chartGrad)"
+                  dot={{ r: 2.5, fill: metricConfig.stroke, strokeWidth: 0 }}
+                  activeDot={{ r: 4, fill: metricConfig.stroke, strokeWidth: 0 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
 
-          <button
-            id="metric-rain-btn"
-            onClick={() => setActiveMetric('rain')}
-            className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-all ${
-              activeMetric === 'rain'
-                ? theme === 'dark'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold'
-                  : 'bg-white text-purple-950 border border-purple-300 font-bold shadow-sm'
-                : theme === 'dark'
-                ? 'text-slate-400 hover:text-slate-200'
-                : 'text-stone-700 hover:text-purple-900'
-            }`}
-          >
-            <CloudRain className="w-3.5 h-3.5" />
-            <span>Rain %</span>
-          </button>
-
-          <button
-            id="metric-wind-btn"
-            onClick={() => setActiveMetric('wind')}
-            className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-all ${
-              activeMetric === 'wind'
-                ? theme === 'dark'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold'
-                  : 'bg-white text-purple-950 border border-purple-300 font-bold shadow-sm'
-                : theme === 'dark'
-                ? 'text-slate-400 hover:text-slate-200'
-                : 'text-stone-700 hover:text-purple-900'
-            }`}
-          >
-            <Wind className="w-3.5 h-3.5" />
-            <span>Wind</span>
-          </button>
+        {/* Hourly strip */}
+        <div className={`mt-4 pt-4 border-t flex items-end gap-4 overflow-x-auto pb-1 scrollbar-none ${
+          isDark ? 'border-slate-800/60' : 'border-blue-100'
+        }`}>
+          {chartData.map((item, idx) => (
+            <div
+              key={idx}
+              className={`shrink-0 flex flex-col items-center gap-1.5 min-w-[44px] transition-opacity ${
+                idx === 0 ? 'opacity-100'
+                  : isDark ? 'opacity-55 hover:opacity-90' : 'opacity-50 hover:opacity-80'
+              }`}
+            >
+              <span className={`text-[10px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                {item.timeLabel}
+              </span>
+              <WeatherIcon conditionText={item.condition} isDay={item.isDay} className="w-4 h-4" />
+              <span className={`text-[11px] font-mono font-medium ${
+                idx === 0
+                  ? isDark ? 'text-slate-100' : 'text-indigo-700'
+                  : isDark ? 'text-slate-300' : 'text-slate-600'
+              }`}>
+                {activeMetric === 'temp' && `${item.temp}°`}
+                {activeMetric === 'rain' && `${item.chanceOfRain}%`}
+                {activeMetric === 'wind' && `${item.windSpeed}`}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
+    </div>
+  );
+};
 
-      {/* Recharts Area Container */}
-      <div className="h-56 sm:h-64 w-full">
-        {chartData.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-xs text-slate-500 font-mono">
-            No telemetry regression samples available
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={chartData}
-              margin={{ top: 8, right: 8, left: -24, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="atmosphericGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={metricConfig.fillStart} />
-                  <stop offset="100%" stopColor={metricConfig.fillEnd} />
-                </linearGradient>
-              </defs>
+/* ── Tooltip ──────────────────────────────────────── */
+interface CustomTooltipProps {
+  active?: boolean; payload?: any[]; label?: string;
+  unit: TemperatureUnit; theme: ThemeMode; activeMetric: ChartMetric;
+}
 
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke={theme === 'dark' ? 'rgba(51, 65, 85, 0.25)' : 'rgba(226, 232, 240, 0.7)'}
-                vertical={false}
-              />
-
-              <XAxis
-                dataKey="timeLabel"
-                stroke={theme === 'dark' ? '#64748B' : '#94A3B8'}
-                tick={{ fontSize: 10, fontFamily: 'IBM Plex Mono' }}
-                tickLine={false}
-                axisLine={{ stroke: theme === 'dark' ? '#1E293B' : '#E2E8F0' }}
-              />
-
-              <YAxis
-                domain={[minVal, maxVal]}
-                stroke={theme === 'dark' ? '#64748B' : '#94A3B8'}
-                tick={{ fontSize: 10, fontFamily: 'IBM Plex Mono' }}
-                tickLine={false}
-                axisLine={false}
-                unit={activeMetric === 'rain' ? '%' : `°`}
-              />
-
-              <Tooltip
-                content={<CustomTooltip unit={unit} theme={theme} activeMetric={activeMetric} />}
-              />
-
-              <Area
-                type="monotone"
-                dataKey={metricConfig.dataKey}
-                stroke={metricConfig.stroke}
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#atmosphericGradient)"
-                activeDot={{
-                  r: 5,
-                  fill: metricConfig.stroke,
-                  stroke: '#020617',
-                  strokeWidth: 2,
-                }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-
-      {/* Mini quick-hour scroller pill cards below chart */}
-      <div
-        className={`mt-4 pt-3.5 border-t flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none ${
-          theme === 'dark' ? 'border-slate-800/80' : 'border-purple-200/80'
-        }`}
-      >
-        {chartData.map((item, idx) => (
-          <div
-            key={idx}
-            className={`shrink-0 px-3 py-2 rounded-xl text-center border transition-all ${
-              idx === 0
-                ? theme === 'dark'
-                  ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
-                  : 'bg-purple-100 border-purple-300 text-purple-950 font-bold shadow-xs'
-                : theme === 'dark'
-                ? 'bg-slate-900/50 border-slate-800/70 text-slate-300 hover:border-slate-700'
-                : 'bg-white/90 border-purple-100 text-slate-900 shadow-xs'
-            }`}
-          >
-            <div
-              className={`text-[10px] font-mono mb-0.5 font-semibold ${
-                theme === 'dark' ? 'text-slate-400' : 'text-stone-600'
-              }`}
-            >
-              {item.timeLabel}
-            </div>
-            <div
-              className={`text-xs font-mono font-bold ${
-                theme === 'dark' ? 'text-slate-100' : 'text-slate-950'
-              }`}
-            >
-              {activeMetric === 'temp' && `${item.temp}°`}
-              {activeMetric === 'rain' && `${item.chanceOfRain}%`}
-              {activeMetric === 'wind' && `${item.windSpeed}`}
-            </div>
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, unit, theme }) => {
+  if (!active || !payload?.length) return null;
+  const data: HourlyChartDataPoint = payload[0].payload;
+  const isDark = theme === 'dark';
+  return (
+    <div className={`p-3 rounded-xl border shadow-lg text-xs font-mono min-w-[160px] ${
+      isDark
+        ? 'bg-slate-900 border-slate-700 text-slate-200'
+        : 'bg-white border-blue-200 text-slate-800 shadow-blue-100'
+    }`}>
+      <div className={`font-semibold mb-2 pb-1.5 border-b text-sm ${
+        isDark ? 'border-slate-700 text-slate-100' : 'border-blue-100 text-indigo-700'
+      }`}>{data.timeLabel}</div>
+      <div className="space-y-1">
+        {[
+          ['Temp',  `${data.temp}°${unit}`],
+          ['Feels', `${data.feelsLike}°${unit}`],
+          ['Rain',  `${data.chanceOfRain}%`],
+          ['Wind',  `${data.windSpeed} ${unit === 'C' ? 'km/h' : 'mph'}`],
+        ].map(([k, v]) => (
+          <div key={k} className="flex justify-between gap-4">
+            <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>{k}</span>
+            <span className="font-semibold">{v}</span>
           </div>
         ))}
       </div>
     </div>
   );
 };
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
-  unit: TemperatureUnit;
-  theme: ThemeMode;
-  activeMetric: ChartMetric;
-}
-
-const CustomTooltip: React.FC<CustomTooltipProps> = ({
-  active,
-  payload,
-  unit,
-  theme,
-}) => {
-  if (!active || !payload || !payload.length) return null;
-
-  const data: HourlyChartDataPoint = payload[0].payload;
-
-  return (
-    <div
-      className={`p-3.5 rounded-xl border shadow-2xl backdrop-blur-xl text-xs font-mono min-w-[170px] ${
-        theme === 'dark'
-          ? 'bg-[#0b1326]/95 border-cyan-500/30 text-slate-200'
-          : 'bg-white/98 border-purple-200 text-slate-900 shadow-lg'
-      }`}
-    >
-      <div
-        className={`flex items-center justify-between font-semibold pb-1.5 mb-2 border-b ${
-          theme === 'dark' ? 'border-slate-800' : 'border-purple-100'
-        }`}
-      >
-        <span
-          className={`font-bold ${
-            theme === 'dark' ? 'text-cyan-400' : 'text-purple-700'
-          }`}
-        >
-          {data.timeLabel}
-        </span>
-        <span
-          className={`text-[10px] ${
-            theme === 'dark' ? 'text-slate-400' : 'text-stone-600 font-medium'
-          }`}
-        >
-          {formatTimeOnly(data.fullTime)}
-        </span>
-      </div>
-
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <span className={theme === 'dark' ? 'text-slate-400' : 'text-stone-600'}>
-            Condition:
-          </span>
-          <span className="font-sans font-medium text-right capitalize truncate max-w-[100px]">
-            {data.condition}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className={theme === 'dark' ? 'text-slate-400' : 'text-stone-600'}>
-            Temp:
-          </span>
-          <span
-            className={`font-bold ${
-              theme === 'dark' ? 'text-cyan-400' : 'text-purple-700 font-bold'
-            }`}
-          >
-            {data.temp}°{unit}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className={theme === 'dark' ? 'text-slate-400' : 'text-stone-600'}>
-            Feels Like:
-          </span>
-          <span className="font-semibold">
-            {data.feelsLike}°{unit}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className={theme === 'dark' ? 'text-slate-400' : 'text-stone-600'}>
-            Rain %:
-          </span>
-          <span
-            className={
-              data.chanceOfRain > 30
-                ? theme === 'dark'
-                  ? 'text-cyan-400 font-bold'
-                  : 'text-indigo-600 font-bold'
-                : 'font-semibold'
-            }
-          >
-            {data.chanceOfRain}%
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className={theme === 'dark' ? 'text-slate-400' : 'text-stone-600'}>
-            Wind:
-          </span>
-          <span className="font-semibold">
-            {data.windSpeed} {unit === 'C' ? 'km/h' : 'mph'}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
