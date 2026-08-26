@@ -50,7 +50,6 @@ export async function searchCities(
 
   return data;
 }
-
 export async function getWeatherForecast(
   query: string,
   days: number = 5,
